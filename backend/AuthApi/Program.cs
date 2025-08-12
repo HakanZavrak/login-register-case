@@ -10,11 +10,11 @@ System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler.DefaultInboundClaimTypeM
 
 var builder = WebApplication.CreateBuilder(args);
 
-// DbContext (Postgres)
+
 builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// CORS
+
 const string AllowFrontend = "_allowFrontend";
 builder.Services.AddCors(opt =>
 {
@@ -24,7 +24,7 @@ builder.Services.AddCors(opt =>
          .AllowAnyMethod());
 });
 
-// JWT
+
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? throw new InvalidOperationException("Jwt:Issuer missing");
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? throw new InvalidOperationException("Jwt:Audience missing");
 var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key missing");
@@ -75,7 +75,7 @@ builder.Services.AddScoped<JwtTokenService>();
 
 builder.Services.AddControllers();
 
-// Swagger
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -99,7 +99,6 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// App start’ta otomatik migrate — SADECE test dýþý ortamlarda
 if (!app.Environment.IsEnvironment("Testing"))
 {
     using var scope = app.Services.CreateScope();
@@ -118,5 +117,5 @@ app.MapControllers();
 
 app.Run();
 
-// WebApplicationFactory için gerekli
+
 public partial class Program { }
