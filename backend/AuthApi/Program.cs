@@ -6,15 +6,15 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
-
 System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 
 var builder = WebApplication.CreateBuilder(args);
 
-
+// DbContext (Postgres)
 builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// CORS
 const string AllowFrontend = "_allowFrontend";
 builder.Services.AddCors(opt =>
 {
@@ -24,10 +24,10 @@ builder.Services.AddCors(opt =>
          .AllowAnyMethod());
 });
 
+// JWT
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? throw new InvalidOperationException("Jwt:Issuer missing");
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? throw new InvalidOperationException("Jwt:Audience missing");
 var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key missing");
-
 var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
 
 builder.Services
@@ -36,14 +36,12 @@ builder.Services
     {
         o.RequireHttpsMetadata = false;
         o.SaveToken = true;
-
         o.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
             ValidateAudience = true,
             ValidateIssuerSigningKey = true,
             ValidateLifetime = true,
-
             ValidIssuer = jwtIssuer,
             ValidAudience = jwtAudience,
             IssuerSigningKey = signingKey,
@@ -51,7 +49,6 @@ builder.Services
             NameClaimType = System.Security.Claims.ClaimTypes.Name,
             RoleClaimType = System.Security.Claims.ClaimTypes.Role
         };
-
         o.Events = new JwtBearerEvents
         {
             OnAuthenticationFailed = ctx =>
@@ -78,11 +75,11 @@ builder.Services.AddScoped<JwtTokenService>();
 
 builder.Services.AddControllers();
 
+// Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "AuthApi", Version = "v1" });
-
     var bearerScheme = new OpenApiSecurityScheme
     {
         Description = "JWT",
@@ -91,33 +88,25 @@ builder.Services.AddSwaggerGen(c =>
         Type = SecuritySchemeType.Http,
         Scheme = "bearer",
         BearerFormat = "JWT",
-        Reference = new OpenApiReference
-        {
-            Type = ReferenceType.SecurityScheme,
-            Id = "Bearer"
-        }
+        Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
     };
-
     c.AddSecurityDefinition("Bearer", bearerScheme);
-
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
-        {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
-            },
-            Array.Empty<string>()
-        }
+        { new OpenApiSecurityScheme { Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" } }, Array.Empty<string>() }
     });
 });
 
 var app = builder.Build();
-using (var scope = app.Services.CreateScope())
+
+// App start’ta otomatik migrate — SADECE test dýþý ortamlarda
+if (!app.Environment.IsEnvironment("Testing"))
 {
-    var db = scope.ServiceProvider.GetRequiredService<AuthApi.Data.AppDbContext>();
-    db.Database.Migrate();  
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.Migrate();
 }
+
 app.UseSwagger();
 app.UseSwaggerUI();
 
@@ -128,3 +117,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+// WebApplicationFactory için gerekli
+public partial class Program { }

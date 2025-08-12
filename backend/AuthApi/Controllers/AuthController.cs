@@ -15,31 +15,30 @@ public class AuthController(AppDbContext db, JwtTokenService jwt) : ControllerBa
 {
     static readonly Regex EmailRx = new(@"^[^\s@]+@[^\s@]+\.[^\s@]+$", RegexOptions.Compiled);
 
-    [HttpPost("register")]
-    public async Task<IActionResult> Register([FromBody] RegisterRequest req)
+[HttpPost("register")]
+public async Task<IActionResult> Register([FromBody] RegisterRequest req)
+{
+    if (!ModelState.IsValid)
+        return BadRequest(new { message = "Geçersiz istek." });
+
+    var exists = await db.Users.AnyAsync(u => u.Email == req.Email);
+    if (exists)
+        return Conflict(new { message = "Bu e-posta zaten kayıtlı." });
+
+    var user = new User
     {
-        if (!EmailRx.IsMatch(req.Email))
-            return BadRequest(new { message = "Geçerli e-posta girin." });
+        Id = Guid.NewGuid(),
+        Email = req.Email,
+        PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.Password),
+        CreatedAt = DateTime.UtcNow
+    };
 
-        if (!IsStrong(req.Password))
-            return BadRequest(new { message = "Şifre zayıf. En az 6 karakter, 1 büyük, 1 küçük, 1 rakam, 1 özel karakter." });
+    db.Users.Add(user);
+    await db.SaveChangesAsync();
 
-        var exists = await db.Users.AnyAsync(u => u.Email == req.Email);
-        if (exists) return BadRequest(new { message = "E-posta zaten kayıtlı." });
+    return Ok(new { message = "Kayıt başarılı." });
+}
 
-        var user = new User
-        {
-            Id = Guid.NewGuid(),
-            Email = req.Email,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.Password),
-            CreatedAt = DateTime.UtcNow
-        };
-
-        db.Users.Add(user);
-        await db.SaveChangesAsync();
-
-        return Ok(new { message = "Kayıt başarılı." });
-    }
 
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest req)
