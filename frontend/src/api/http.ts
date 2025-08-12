@@ -1,9 +1,8 @@
 import axios from "axios";
-import { getToken, clearToken } from "../Utilities/auth";
+import { getToken, clearToken } from "../Utilities/auth"; 
 
 export const http = axios.create({
-  baseURL: import.meta.env.VITE_API_URL, 
-  withCredentials: false,
+  baseURL: import.meta.env.VITE_API_URL,
 });
 
 http.interceptors.request.use((config) => {

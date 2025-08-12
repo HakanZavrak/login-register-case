@@ -3,21 +3,28 @@ import { http } from "../api/http";
 
 export default function Protected() {
   const [msg, setMsg] = useState("Yükleniyor...");
-  const useMock = import.meta.env.VITE_USE_MOCK === "1";
 
   useEffect(() => {
+    let alive = true;
+
     (async () => {
-      if (useMock) {
-        setMsg("Protected sayfası mock ile gelebildik.");
-      } else {
-        const res = await http.get("/me");
-        setMsg(`Merhaba ${res.data?.email || "hakan"}!`);
+      try {
+        const { data } = await http.get("/me");
+        if (!alive) return;
+        setMsg(`Merhaba ${data?.email ?? "kullanıcı"}!`);
+      } catch {
+        if (!alive) return;
+        setMsg("Yetkisiz veya oturum süresi doldu.");
       }
     })();
-  }, [useMock]);
+
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   return (
-    <main style={{ padding: 24 }}>
+    <main className="auth-card">
       <h1>Protected Page</h1>
       <p>{msg}</p>
     </main>

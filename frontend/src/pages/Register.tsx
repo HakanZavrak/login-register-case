@@ -10,7 +10,7 @@ export default function Register() {
   const [err, setErr] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const navigate = useNavigate();
-  const useMock = import.meta.env.VITE_USE_MOCK === "1";
+
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -38,18 +38,14 @@ export default function Register() {
     if (password !== confirmPassword) return setErr("Şifreler eşleşmiyor.");
 
     try {
-      if (useMock) {
-        setOk("Kayıt başarılı. Şimdi giriş yapabilirsin.");
-        setTimeout(() => navigate("/login"), 800);
-      } else {
-        await http.post("/auth/register", { email, password });
-        setOk("Kayıt başarılı. Şimdi giriş yapabilirsin.");
-        setTimeout(() => navigate("/login"), 800);
-      }
-    } catch (e: unknown) {
-      if (axios.isAxiosError(e)) setErr(e.response?.data?.message || "Kayıt başarısız.");
-      else setErr("Kayıt başarısız.");
-    }
+  await http.post("/auth/register", { email, password });
+  setOk("Kayıt başarılı. Şimdi giriş yapabilirsin.");
+  setTimeout(() => navigate("/login"), 800);
+}
+catch (e: unknown) {
+  if (axios.isAxiosError(e)) setErr(e.response?.data?.message ?? "Kayıt başarısız.");
+  else setErr("Kayıt başarısız.");
+}
   }
 
   return (
