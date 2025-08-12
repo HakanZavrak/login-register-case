@@ -1,0 +1,50 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16
+    container_name: authdb
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: authdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d authdb"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: ./backend/AuthApi
+    environment:
+      ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=authdb;Username=app;Password=app
+      Jwt__Issuer: AuthApi
+      Jwt__Audience: AuthApiClient
+      Jwt__Key: dev-CHANGE-ME-THIS-IS-A-64-CHAR-SECRET-STRING-0123456789abcd
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"   # Swagger'a dışarıdan erişim
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: /api
+    depends_on:
+      - api
+    ports:
+      - "8085:80"
+    restart: unless-stopped
+
+volumes:
+  pgdata:

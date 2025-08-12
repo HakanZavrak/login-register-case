@@ -19,7 +19,7 @@ const string AllowFrontend = "_allowFrontend";
 builder.Services.AddCors(opt =>
 {
     opt.AddPolicy(AllowFrontend, p =>
-        p.WithOrigins("http://localhost:5173")
+        p.WithOrigins("http://localhost:5173", "http://localhost:8085")
          .AllowAnyHeader()
          .AllowAnyMethod());
 });
@@ -113,6 +113,11 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 var app = builder.Build();
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AuthApi.Data.AppDbContext>();
+    db.Database.Migrate();  
+}
 app.UseSwagger();
 app.UseSwaggerUI();
 

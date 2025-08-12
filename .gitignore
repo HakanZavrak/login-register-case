@@ -44,8 +44,6 @@ obj/
 # ASP.NET secrets
 appsettings*.json
 
-# EF Core Migrations history (optional)
-Migrations/
 
 # Rider / JetBrains
 .idea/
