@@ -29,3 +29,28 @@ build/
 # Logs
 logs
 *.log
+
+# .NET build output
+bin/
+obj/
+
+# User-specific files
+*.user
+*.rsuser
+
+# Visual Studio
+.vs/
+
+# ASP.NET secrets
+appsettings*.json
+
+# EF Core Migrations history (optional)
+Migrations/
+
+# Rider / JetBrains
+.idea/
+
+# OS files
+Thumbs.db
+.DS_Store
+
