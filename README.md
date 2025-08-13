@@ -65,6 +65,8 @@ dotnet test
 ### E2E (Playwright)
 ```bash
 cd frontend
+npm install
+npx playwright install
 npx playwright test
 ```
 - **Senaryolar**:
