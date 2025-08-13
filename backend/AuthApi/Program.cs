@@ -6,14 +6,23 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
+//  monitoring extension
+using AuthApi.Infrastructure;
+
 System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 
 var builder = WebApplication.CreateBuilder(args);
 
+//   console log
+builder.Logging.ClearProviders();
+builder.Logging.AddSimpleConsole(o =>
+{
+    o.SingleLine = true;
+    o.TimestampFormat = "HH:mm:ss ";
+});
 
 builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
-
 
 const string AllowFrontend = "_allowFrontend";
 builder.Services.AddCors(opt =>
@@ -23,7 +32,6 @@ builder.Services.AddCors(opt =>
          .AllowAnyHeader()
          .AllowAnyMethod());
 });
-
 
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? throw new InvalidOperationException("Jwt:Issuer missing");
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? throw new InvalidOperationException("Jwt:Audience missing");
@@ -72,9 +80,8 @@ builder.Services
 
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<JwtTokenService>();
-
 builder.Services.AddControllers();
-
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -106,6 +113,12 @@ if (!app.Environment.IsEnvironment("Testing"))
     db.Database.Migrate();
 }
 
+//  monitoring middleware
+app.UseRequestMonitoring(app.Logger);
+
+// health check endpoint
+app.MapGet("/healthz", () => Results.Ok(new { status = "ok", ts = DateTime.UtcNow }));
+
 app.UseSwagger();
 app.UseSwaggerUI();
 
@@ -116,6 +129,5 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
-
 
 public partial class Program { }

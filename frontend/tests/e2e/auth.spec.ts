@@ -14,7 +14,7 @@ test('register → login → protected', async ({ page }) => {
     page.waitForResponse((res) =>
       res.url().includes('/api/auth/register') && res.status() === 200
     ),
-    page.click('button:has-text("Kayıt Ol")'),
+    page.click('button:has-text("Sign up")'),
   ]);
 
   await page.goto('/login');
@@ -25,7 +25,7 @@ test('register → login → protected', async ({ page }) => {
     page.waitForResponse((res) =>
       res.url().includes('/api/auth/login') && res.status() === 200
     ),
-    page.click('button:has-text("Giriş Yap")'),
+    page.click('button:has-text("Sign in")'),
   ]);
 
   await expect(page.locator('h1', { hasText: 'Protected Page' })).toBeVisible({ timeout: 15000 });
@@ -34,5 +34,5 @@ test('register → login → protected', async ({ page }) => {
 test('token yokken /protected → /login yönlendirir', async ({ page }) => {
   await page.addInitScript(() => localStorage.clear());
   await page.goto('/protected');
-  await expect(page.locator('h1', { hasText: 'Login' })).toBeVisible();
+  await expect(page.locator('h1', { hasText: 'Welcome Back!' })).toBeVisible();
 });

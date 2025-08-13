@@ -1,62 +1,52 @@
-﻿using AuthApi.Data;
+﻿using System.Threading.Tasks;
 using AuthApi.Dtos;
-using AuthApi.Models;
 using AuthApi.Services;
-using BCrypt.Net;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using System.Text.RegularExpressions;
 
 namespace AuthApi.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class AuthController(AppDbContext db, JwtTokenService jwt) : ControllerBase
+
+//endpoint içinde logic olmayacağı için burayı düzenleyip yeni bir dto ve 2 tane servis oluşturduk artık logic kısımları oralara aktarıldı daha temiz oldu
+public class AuthController : ControllerBase
 {
-    static readonly Regex EmailRx = new(@"^[^\s@]+@[^\s@]+\.[^\s@]+$", RegexOptions.Compiled);
+    private readonly IAuthService _auth;
 
-[HttpPost("register")]
-public async Task<IActionResult> Register([FromBody] RegisterRequest req)
-{
-    if (!ModelState.IsValid)
-        return BadRequest(new { message = "Geçersiz istek." });
-
-    var exists = await db.Users.AnyAsync(u => u.Email == req.Email);
-    if (exists)
-        return Conflict(new { message = "Bu e-posta zaten kayıtlı." });
-
-    var user = new User
+    public AuthController(IAuthService auth)
     {
-        Id = Guid.NewGuid(),
-        Email = req.Email,
-        PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.Password),
-        CreatedAt = DateTime.UtcNow
-    };
+        _auth = auth;
+    }
 
-    db.Users.Add(user);
-    await db.SaveChangesAsync();
+    [HttpPost("register")]
+    public async Task<IActionResult> Register([FromBody] RegisterRequest req)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(new { message = "Geçersiz istek." });
 
-    return Ok(new { message = "Kayıt başarılı." });
-}
+        var result = await _auth.RegisterAsync(req);
+        if (!result.Success)
+        {
+            // e-posta zaten kayıtlı ise 409; diğer durumlarda 400 döndürmek hoş olur
+            if (result.Message?.Contains("zaten kayıtlı") == true)
+                return Conflict(new { message = result.Message });
 
+            return BadRequest(new { message = result.Message });
+        }
+
+        return Ok(new { message = result.Message });
+    }
 
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest req)
     {
-        var user = await db.Users.SingleOrDefaultAsync(u => u.Email == req.Email);
-        if (user is null) return Unauthorized(new { message = "E-posta veya şifre hatalı." });
+        if (!ModelState.IsValid)
+            return BadRequest(new { message = "Geçersiz istek." });
 
-        var ok = BCrypt.Net.BCrypt.Verify(req.Password, user.PasswordHash);
-        if (!ok) return Unauthorized(new { message = "E-posta veya şifre hatalı." });
+        var result = await _auth.LoginAsync(req);
+        if (!result.Success)
+            return Unauthorized(new { message = result.Message });
 
-        var token = jwt.Create(user);
-        return Ok(new { token });
+        return Ok(new { token = result.Token });
     }
-
-    static bool IsStrong(string p) =>
-        p.Length >= 6 &&
-        p.Any(char.IsUpper) &&
-        p.Any(char.IsLower) &&
-        p.Any(char.IsDigit) &&
-        p.Any(ch => ".!@#$%^&*".Contains(ch));
 }
