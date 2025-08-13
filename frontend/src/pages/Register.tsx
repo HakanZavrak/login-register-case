@@ -1,23 +1,34 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { http } from "../api/http";
 import axios from "axios";
 
+const LS_KEY = "recentEmails";
+const loadEmails = (): string[] => {
+  try { return JSON.parse(localStorage.getItem(LS_KEY) || "[]"); } catch { return []; }
+};
+const saveEmail = (email: string) => {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
+  const list = loadEmails().filter(e => e.toLowerCase() !== email.toLowerCase());
+  list.unshift(email);
+  localStorage.setItem(LS_KEY, JSON.stringify(list.slice(0, 5)));
+};
+
 export default function Register() {
   const [email, setEmail] = useState("");
+  const [emailList, setEmailList] = useState<string[]>([]);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false);
   const [showPwd, setShowPwd] = useState(false);
   const [showConfirmPwd, setShowConfirmPwd] = useState(false);
 
   const navigate = useNavigate();
 
   useEffect(() => {
-    const t = requestAnimationFrame(() => setMounted(true));
-    return () => cancelAnimationFrame(t);
+    setEmailList(loadEmails());
   }, []);
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -47,10 +58,10 @@ export default function Register() {
 
     try {
       await http.post("/auth/register", { email, password });
+      saveEmail(email);
       setOk("Kayıt başarılı. Şimdi giriş yapabilirsin.");
       setTimeout(() => navigate("/login"), 800);
-    } 
-    catch (e: unknown) {
+    } catch (e: unknown) {
       if (axios.isAxiosError(e)) setErr(e.response?.data?.message ?? "Kayıt başarısız.");
       else setErr("Kayıt başarısız.");
     }
@@ -58,25 +69,27 @@ export default function Register() {
 
   return (
     <div className="min-h-screen bg-gray-100 grid lg:grid-cols-2">
-      <aside
+      <motion.div
         className="hidden lg:block bg-cover bg-center order-last lg:order-first"
+        initial={{ opacity: 0, x: -60, filter: "blur(6px)" }}
+        animate={{ opacity: 1, x: 0,   filter: "blur(0px)" }}
+        exit={{ opacity: 0, x: -60,    filter: "blur(6px)" }}
+        transition={{ duration: 0.30, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
       >
         <div className="h-full w-full bg-black/50 flex items-center justify-center p-12">
           <div className="text-center text-white max-w-md">
             <h2 className="text-3xl font-bold mb-4">Join Us</h2>
-            <p className="text-lg opacity-90">
-              Get started with your account and explore more.
-            </p>
+            <p className="text-lg opacity-90">Get started with your account and explore more.</p>
           </div>
         </div>
-      </aside>
+      </motion.div>
 
-      <main
-        className={[
-          "w-full flex items-center justify-center p-6 sm:p-8",
-          "transform transition-all duration-500 ease-out",
-          mounted ? "opacity-100 translate-x-0" : "opacity-0 translate-x-8"
-        ].join(" ")}
+      <motion.main
+        initial={{ opacity: 0, x: 60, filter: "blur(6px)" }}
+        animate={{ opacity: 1, x: 0,  filter: "blur(0px)" }}
+        exit={{ opacity: 0, x: 60,   filter: "blur(6px)" }}
+        transition={{ duration: 0.30, ease: [0.22, 1, 0.36, 1] }}
+        className="w-full flex items-center justify-center p-6 sm:p-8"
       >
         <div className="w-full max-w-md">
           <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8">
@@ -90,11 +103,16 @@ export default function Register() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
                 <input
                   type="email"
+                  list="email-suggestions"
                   placeholder="email@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
                   className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent"
                 />
+                <datalist id="email-suggestions">
+                  {emailList.map((e) => <option key={e} value={e} />)}
+                </datalist>
               </div>
 
               <div>
@@ -164,13 +182,17 @@ export default function Register() {
 
             <p className="mt-4 text-center text-gray-600">
               Already had an account?{" "}
-              <Link to="/login" className="text-red-600 hover:text-red-700 font-semibold">
+              <button
+                type="button"
+                onClick={() => navigate("/login")}
+                className="text-red-600 hover:text-red-700 font-semibold"
+              >
                 Log in
-              </Link>
+              </button>
             </p>
           </div>
         </div>
-      </main>
+      </motion.main>
     </div>
   );
 }
