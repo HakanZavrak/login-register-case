@@ -17,6 +17,11 @@ namespace AuthApi.Controllers
         private readonly EndpointDataSource _endpoints;
         private static readonly DateTime _startTime = DateTime.UtcNow;
 
+        private static readonly string[] _ignoredPrefixes = new[]
+        {
+            "/swagger", "/favicon", "/_framework", "/_content", "/assets", "/static", "/files"
+        };
+
         public MetricsController(AppMetrics metrics, AppDbContext db, EndpointDataSource endpoints)
         {
             _metrics = metrics;
@@ -31,13 +36,17 @@ namespace AuthApi.Controllers
             var endpointsCount = _endpoints.Endpoints
                 .OfType<RouteEndpoint>()
                 .Select(e => e.RoutePattern.RawText)
-                .Where(p => p != null && !p.StartsWith("/swagger"))
+                .Where(p => !string.IsNullOrWhiteSpace(p))
+                .Where(p => !_ignoredPrefixes.Any(pref =>
+                    p!.StartsWith(pref, StringComparison.OrdinalIgnoreCase)))
                 .Distinct()
                 .Count();
 
             var uptime = DateTime.UtcNow - _startTime;
 
             var byEndpoint = _metrics.PerRouteCounts
+                .Where(kv => !_ignoredPrefixes.Any(pref =>
+                    kv.Key.StartsWith(pref, StringComparison.OrdinalIgnoreCase)))
                 .OrderByDescending(kv => kv.Value)
                 .Select(kv => new { name = kv.Key, count = kv.Value })
                 .ToList();
