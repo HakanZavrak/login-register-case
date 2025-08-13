@@ -105,8 +105,13 @@ Varsayılan adres: http://localhost:5173
 - **CORS** ayarlı
 - **DB Migration**: Startup'ta otomatik
 - **Health Check**: `/healthz`
-- **Minimal Monitoring**:(TODO)
+- **Minimal Monitoring**:
   - Her istek loglanır → `GET /me -> 200 15ms`
+  - Gerçek zamanlı metrikler → `/api/metrics/summary`
+  - Toplam endpoint sayısı
+  - Toplam kullanıcı sayısı
+  - Bugünkü istek sayısı
+  - Ortalama latency (ms)
 - **Logout** → localStorage token silme
 
 ---

@@ -83,6 +83,9 @@ builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddControllers();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
+//  Metricslerk
+builder.Services.AddSingleton<AppMetrics>();
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {

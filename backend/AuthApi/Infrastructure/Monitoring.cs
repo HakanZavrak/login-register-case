@@ -1,56 +1,41 @@
-﻿
-using System.Diagnostics;
-using System.Diagnostics.Metrics;
+﻿using System.Diagnostics;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection; // <-- EKLENDİ
+using System.Threading.Tasks;
 
-namespace AuthApi.Infrastructure;
-
-public static class Monitoring
+namespace AuthApi.Infrastructure
 {
-    private static readonly Meter Meter = new("AuthApi", "1.0.0");
-
-    public static readonly Counter<long> RequestCount =
-        Meter.CreateCounter<long>("http_requests_total");
-
-    public static readonly Counter<long> ErrorCount =
-        Meter.CreateCounter<long>("http_requests_errors_total");
-
-    public static readonly Histogram<double> RequestDurationMs =
-        Meter.CreateHistogram<double>("http_request_duration_ms");
-
-    public static IApplicationBuilder UseRequestMonitoring(this IApplicationBuilder app, ILogger logger)
+    public static class MonitoringExtensions
     {
-        return app.Use(async (ctx, next) =>
+        public static IApplicationBuilder UseRequestMonitoring(this IApplicationBuilder app, ILogger logger)
         {
-            var sw = Stopwatch.StartNew();
-            try
+            return app.Use(async (ctx, next) =>
             {
-                await next();
-            }
-            finally
-            {
-                sw.Stop();
+                var sw = Stopwatch.StartNew();
                 var method = ctx.Request.Method;
                 var path = ctx.Request.Path.ToString();
-                var status = ctx.Response.StatusCode;
-                var ms = sw.Elapsed.TotalMilliseconds;
 
-                // Tek satır, okunaklı log
-                logger.LogInformation("{method} {path} -> {status} {elapsed}ms",
-                    method, path, status, (int)ms);
-
-                var tags = new[]
+                try
                 {
-                    new KeyValuePair<string, object?>("method", method),
-                    new KeyValuePair<string, object?>("route", path),
-                    new KeyValuePair<string, object?>("status", status),
-                };
+                    await next.Invoke();
+                }
+                finally
+                {
+                    sw.Stop();
+                    var ms = sw.Elapsed.TotalMilliseconds;
+                    var status = ctx.Response.StatusCode;
 
-                RequestCount.Add(1, tags);
-                RequestDurationMs.Record(ms, tags);
-                if (status >= 500) ErrorCount.Add(1, tags);
-            }
-        });
+                    // mevcut log
+                    logger.LogInformation("[HTTP] {Method} {Path} -> {Status} in {Elapsed} ms",
+                        method, path, status, ms);
+
+                    // metrics güncelle
+                    var metrics = ctx.RequestServices.GetRequiredService<AppMetrics>();
+                    metrics.AddRequest(path, status, ms);
+                }
+            });
+        }
     }
 }
