@@ -17,6 +17,20 @@ docker compose logs -f
 
 ---
 
+
+
+---
+
+## Servis URL'leri
+
+ Servis    ────> Port ────>  Açıklama                     
+ Frontend  ────> 8085 ────>  React SPA                    
+ Backend   ────> 8080 ────>  .NET 8 Web API + Swagger UI  
+ Database  ────> 5432 ────>  PostgreSQL 16                
+
+---
+
+
 ## Proje Yapısı
 
 ```
@@ -40,19 +54,28 @@ docker compose logs -f
 └── README.md
 ```
 
+## Testler
+
+### Backend Unit/Integration
+```bash
+cd backend/AuthApi.Tests
+dotnet test
+```
+
+### E2E (Playwright)
+```bash
+cd frontend
+npx playwright test
+```
+- **Senaryolar**:
+  - `register → login → protected` başarılı geçiş
+  - `token yokken → /protected → /login` yönlendirme
+- Testler docker-compose ortamında da çalışır.
+
 ---
 
-## Servis URL'leri
 
-| Servis    | Port  | Açıklama                     |
-|-----------|-------|------------------------------|
-| Frontend  | 8085  | React SPA                    |
-| Backend   | 8080  | .NET 8 Web API + Swagger UI  |
-| Database  | 5432  | PostgreSQL 16                |
-
----
-
-## Geliştirme Modu
+## Developer Modu
 
 ### Backend (API)
 ```bash
@@ -86,25 +109,7 @@ Varsayılan adres: http://localhost:5173
 
 ---
 
-## Testler
 
-### Backend Unit/Integration
-```bash
-cd backend/AuthApi.Tests
-dotnet test
-```
-
-### E2E (Playwright)
-```bash
-cd frontend
-npx playwright test
-```
-- **Senaryolar**:
-  - `register → login → protected` başarılı geçiş
-  - `token yokken → /protected → /login` yönlendirme
-- Testler docker-compose ortamında da çalışır.
-
----
 
 ## Docker Ortamı
 
@@ -122,7 +127,6 @@ docker compose up -d --build
 ```bash
 docker compose down
 ```
-
 
 ---
 
